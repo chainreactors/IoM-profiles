@@ -1,0 +1,5 @@
+- name: execute_shellcode
+  body: !ExecuteBinary
+    name: execute_shellcode
+    bin: !File "shellcode.bin"
+    Arc: 1

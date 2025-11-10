@@ -1,0 +1,80 @@
+name: Create Release Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip
+      
+      - name: Package directories
+        run: |
+          # 创建临时目录存放 zip 文件
+          mkdir -p release-packages
+          
+          # 遍历根目录下的每个目录
+          for dir in */; do
+            # 排除 .git 和 .github 目录
+            if [[ "$dir" != ".git/" && "$dir" != ".github/" ]]; then
+              dir_name=$(basename "$dir")
+              
+              # 进入目录，将内容打包（不包含目录本身）
+              cd "$dir"
+              zip -r "../release-packages/${dir_name}.zip" . -q
+              cd ..
+              
+              echo "✓ Packaged $dir_name"
+            fi
+          done
+      
+      - name: Get tag name
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create Release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release-packages/*.zip
+          draft: false
+          prerelease: false
+          tag_name: ${{ steps.tag.outputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create Release (Manual)
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release-packages/*.zip
+          draft: false
+          prerelease: false
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Release ${{ steps.tag.outputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: List packages
+        run: |
+          echo "Generated packages:"
+          ls -lh release-packages/
+

